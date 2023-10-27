@@ -1,5 +1,5 @@
-S3_BUCKET=swoldemi-tmp # Replace with your S3 bucket
-DEFAULT_REGION=us-east-2 # Replace with your region
+S3_BUCKET=aws2-develop-lambda-code # Replace with your S3 bucket
+DEFAULT_REGION=eu-central-1 # Replace with your region
 
 FUNCTION_NAME=amazon-ecr-repository-compliance-webhook
 COVERAGE=coverage.out
