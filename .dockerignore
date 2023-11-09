@@ -1,0 +1,8 @@
+*
+!pkg
+!scripts
+!buildspec.yml
+!go.mod
+!go.sum
+!*.go
+!Makefile
