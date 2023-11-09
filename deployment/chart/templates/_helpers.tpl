@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "sample-application.name" -}}
+{{- define "amazon-ecr-repository-compliance-webhook.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "sample-application.fullname" -}}
+{{- define "amazon-ecr-repository-compliance-webhook.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "sample-application.chart" -}}
+{{- define "amazon-ecr-repository-compliance-webhook.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "sample-application.labels" -}}
-helm.sh/chart: {{ include "sample-application.chart" . }}
-{{ include "sample-application.selectorLabels" . }}
+{{- define "amazon-ecr-repository-compliance-webhook.labels" -}}
+helm.sh/chart: {{ include "amazon-ecr-repository-compliance-webhook.chart" . }}
+{{ include "amazon-ecr-repository-compliance-webhook.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "sample-application.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "sample-application.name" . }}
+{{- define "amazon-ecr-repository-compliance-webhook.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "amazon-ecr-repository-compliance-webhook.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "sample-application.serviceAccountName" -}}
+{{- define "amazon-ecr-repository-compliance-webhook.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "sample-application.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "amazon-ecr-repository-compliance-webhook.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
