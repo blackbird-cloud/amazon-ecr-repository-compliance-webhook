@@ -24,8 +24,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/aws/aws-xray-sdk-go/xraylog"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,17 +31,17 @@ import (
 )
 
 func init() {
-	xraylvl, loglvl := logLevels(os.Getenv("LOG_LEVEL"))
+	loglvl := logLevels(os.Getenv("LOG_LEVEL"))
 	log.SetFormatter(new(log.JSONFormatter))
-	log.Infof("Got log levels [%s, %s]", xraylvl, loglvl)
+	log.Infof("Got log level: `%s`", loglvl)
 	log.SetLevel(loglvl)
 	log.SetOutput(os.Stdout)
 }
 
 var (
-	sess      = xray.AWSSession(session.Must(session.NewSession()))
-	svc       = ecr.New(sess, &aws.Config{Region: getRegistryRegion()})
-	container = function.NewContainer(svc)
+	sess, sessError = session.NewSession()
+	svc             = ecr.New(sess, &aws.Config{Region: getRegistryRegion()})
+	container       = function.NewContainer(svc)
 
 	// decoding
 	runtimeScheme = runtime.NewScheme()
@@ -53,6 +51,10 @@ var (
 
 func main() {
 	log.Infof("Starting server")
+
+	if sessError != nil {
+		log.Errorf("Loading aws session failed %s", sessError)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest)
@@ -102,26 +104,13 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func logLevels(lvl string) (xraylog.LogLevel, log.Level) {
+func logLevels(lvl string) log.Level {
 	loglvl, err := log.ParseLevel(lvl)
 	if err != nil {
-		return xraylog.LogLevelInfo, log.InfoLevel
+		return log.InfoLevel
 	}
 
-	var xraylvl xraylog.LogLevel
-	switch lvl {
-	case "DEBUG":
-		xraylvl = xraylog.LogLevelDebug
-	case "INFO":
-		xraylvl = xraylog.LogLevelInfo
-	case "WARN":
-		xraylvl = xraylog.LogLevelWarn
-	case "ERROR":
-		xraylvl = xraylog.LogLevelError
-	default:
-		xraylvl = xraylog.LogLevelInfo
-	}
-	return xraylvl, loglvl
+	return loglvl
 }
 
 func getRegistryRegion() *string {
