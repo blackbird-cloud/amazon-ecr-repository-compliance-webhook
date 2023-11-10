@@ -37,7 +37,7 @@ func init() {
 	log.SetFormatter(new(log.JSONFormatter))
 	log.Infof("Got log levels [%s, %s]", xraylvl, loglvl)
 	log.SetLevel(loglvl)
-	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylvl))
+	log.SetOutput(os.Stdout)
 }
 
 var (
@@ -52,18 +52,20 @@ var (
 )
 
 func main() {
-	log.Infof("Starting rcw:")
+	log.Infof("Starting server")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRequest)
 
 	err := http.ListenAndServe(":3333", mux)
 	if err != nil {
-		log.Fatalln("Server failed with error", err)
+		log.Infof("Server failed with error %s", err)
 	}
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
+	log.Infof("Got request on %s\n", r.URL.Path)
+
 	val, ok := r.Header[http.CanonicalHeaderKey("Content-Type")]
 	if !ok {
 		http.Error(w, "ErrMissingContentType", http.StatusBadRequest)
@@ -78,6 +80,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ErrMissingBody", http.StatusBadRequest)
 		return
 	}
+	log.Infof("Got body %s %d", body, len(body))
 
 	var review v1beta1.AdmissionReview
 	if _, _, err := deserializer.Decode([]byte(body), nil, &review); err != nil {
@@ -86,12 +89,14 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := &webhook.Request{Admission: review.Request}
+	log.Infof("Got parse req %v", *req)
 
 	res, err := container.HandleRequest(context.Background(), req)
 	if err != nil {
 		http.Error(w, "Could not handle request", http.StatusInternalServerError)
 		return
 	}
+	log.Infof("Sending response %+v", *res)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
