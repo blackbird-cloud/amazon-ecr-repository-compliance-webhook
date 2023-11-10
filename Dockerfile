@@ -7,8 +7,8 @@ COPY . /app/
 
 RUN make compile
 
-FROM scratch
+# FROM scratch
 
-COPY --from=builder /app/main /app/main
+# COPY --from=builder /app/main /app/main
 
 ENTRYPOINT ["/app/main"]
