@@ -43,6 +43,7 @@ const code = 406 // NotAcceptable
 // 4. Using the Pod, check if the requested creation namespace is a critical one (e.g. kube-system).
 // 5. Using the Pod, extract all of the unique container images that are in the specification
 //   - If no images in the specification come from ECR, deny the admission immediately
+//
 // 6. For every image provided, check our 4 requirements
 // 7. If a single image didn't meet our requirements, deny the admission
 // 8. All requirements satisfied, allow the Pod for admission
@@ -54,39 +55,44 @@ func (c *Container) Handler() Handler {
 			return webhook.BadRequestResponse(err)
 		}
 
-		response, err := webhook.NewResponseFromRequest(request) // 2
-		if err != nil {
-			log.Errorf("Error crafting response from request: %v", err)
-			return webhook.BadRequestResponse(err)
-		}
-
-		pod, err := request.UnmarshalPod() // 3
-		if err != nil {
-			log.Errorf("Error unmarshalling Pod: %v", err)
-			return response.FailValidation(code, err)
-		}
-
-		if webhook.InCriticalNamespace(pod) { // 4
-			log.Info("Pod is in critical namespace, automatically passing")
-			return response.PassValidation(), nil
-		}
-
-		images := webhook.ParseImages(pod) // 5
-		if len(images) == 0 {
-			log.Error(ErrImagesNotFound)
-			return response.FailValidation(code, ErrImagesNotFound)
-		}
-
-		compliant, err := c.BatchCheckRepositoryCompliance(ctx, images) // 6
-		if err != nil {
-			log.Errorf("Error during compliance check: %v", err)
-			return response.FailValidation(code, err)
-		}
-
-		if !compliant { // 7
-			log.Error("Repository is not compliant")
-			return response.FailValidation(code, ErrFailedCompliance)
-		}
-		return response.PassValidation(), nil // 8
+		return c.HandleRequest(ctx, request)
 	}
+}
+
+func (c *Container) HandleRequest(ctx context.Context, request *webhook.Request) (*v1beta1.AdmissionReview, error) {
+
+	response, err := webhook.NewResponseFromRequest(request) // 2
+	if err != nil {
+		log.Errorf("Error crafting response from request: %v", err)
+		return webhook.BadRequestResponse(err)
+	}
+
+	pod, err := request.UnmarshalPod() // 3
+	if err != nil {
+		log.Errorf("Error unmarshalling Pod: %v", err)
+		return response.FailValidation(code, err)
+	}
+
+	if webhook.InCriticalNamespace(pod) { // 4
+		log.Info("Pod is in critical namespace, automatically passing")
+		return response.PassValidation(), nil
+	}
+
+	images := webhook.ParseImages(pod) // 5
+	if len(images) == 0 {
+		log.Error(ErrImagesNotFound)
+		return response.FailValidation(code, ErrImagesNotFound)
+	}
+
+	compliant, err := c.BatchCheckRepositoryCompliance(ctx, images) // 6
+	if err != nil {
+		log.Errorf("Error during compliance check: %v", err)
+		return response.FailValidation(code, err)
+	}
+
+	if !compliant { // 7
+		log.Error("Repository is not compliant")
+		return response.FailValidation(code, ErrFailedCompliance)
+	}
+	return response.PassValidation(), nil // 8
 }

@@ -13,16 +13,23 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"os"
 
 	"github.com/aws-samples/amazon-ecr-repository-compliance-webhook/pkg/function"
-	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws-samples/amazon-ecr-repository-compliance-webhook/pkg/webhook"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	"github.com/aws/aws-xray-sdk-go/xraylog"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/api/admission/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 func init() {
@@ -34,20 +41,60 @@ func init() {
 }
 
 var (
-	sess = xray.AWSSession(session.Must(session.NewSession()))
-	svc  = ecr.New(sess, &aws.Config{Region: getRegistryRegion()})
+	sess      = xray.AWSSession(session.Must(session.NewSession()))
+	svc       = ecr.New(sess, &aws.Config{Region: getRegistryRegion()})
+	container = function.NewContainer(svc)
 
-	// Handler is the handler for the validating webhook.
-	Handler = function.NewContainer(svc).Handler().WithLogging().WithProxiedResponse()
-
-	// Version is the shortened git hash of the binary's source code.
-	// It is injected using the -X linker flag when running `make`
-	Version string
+	// decoding
+	runtimeScheme = runtime.NewScheme()
+	codecs        = serializer.NewCodecFactory(runtimeScheme)
+	deserializer  = codecs.UniversalDeserializer()
 )
 
 func main() {
-	log.Infof("Starting function version: %s", Version)
-	lambda.Start(Handler)
+	log.Infof("Starting rcw:")
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleRequest)
+
+	err := http.ListenAndServe(":3333", mux)
+	if err != nil {
+		log.Fatalln("Server failed with error", err)
+	}
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	val, ok := r.Header[http.CanonicalHeaderKey("Content-Type")]
+	if !ok {
+		http.Error(w, "ErrMissingContentType", http.StatusBadRequest)
+		return
+	}
+	if val[0] != "application/json" {
+		http.Error(w, "ErrInvalidContentType", http.StatusBadRequest)
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "ErrMissingBody", http.StatusBadRequest)
+		return
+	}
+
+	var review v1beta1.AdmissionReview
+	if _, _, err := deserializer.Decode([]byte(body), nil, &review); err != nil {
+		http.Error(w, "ErrDecode", http.StatusBadRequest)
+		return
+	}
+
+	req := &webhook.Request{Admission: review.Request}
+
+	res, err := container.HandleRequest(context.Background(), req)
+	if err != nil {
+		http.Error(w, "Could not handle request", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
 }
 
 func logLevels(lvl string) (xraylog.LogLevel, log.Level) {

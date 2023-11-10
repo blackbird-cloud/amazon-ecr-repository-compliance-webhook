@@ -2,6 +2,10 @@ module github.com/aws-samples/amazon-ecr-repository-compliance-webhook
 
 go 1.14
 
+replace github.com/aws-samples/amazon-ecr-repository-compliance-webhook/pkg/webhook => ./pkg/webhook
+
+replace github.com/aws-samples/amazon-ecr-repository-compliance-webhook/pkg/function => ./pkg/function
+
 require (
 	github.com/aws/aws-lambda-go v1.16.0
 	github.com/aws/aws-sdk-go v1.30.26
