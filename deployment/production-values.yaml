@@ -1,2 +1,11 @@
 serviceAccount:
   name: "amazon-ecr-repository-compliance-webhook"
+
+httpRoute:
+  enabled: true
+  annotations: {}
+  gateway:
+    name: external
+    namespace: istio-ingress
+  hosts:
+    - repository-compliance-webhook.external.blackbird.cloud
