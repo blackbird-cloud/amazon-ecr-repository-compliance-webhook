@@ -11,3 +11,4 @@ httpRoute:
     - repository-compliance-webhook.webinar.external.blackbird.cloud
 
 webhookUrl: https://repository-compliance-webhook.webinar.external.blackbird.cloud
+ValidatingWebhookConfiguration: false

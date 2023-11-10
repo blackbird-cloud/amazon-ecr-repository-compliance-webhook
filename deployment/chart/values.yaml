@@ -81,3 +81,5 @@ secrets:
   enabled: false
 
 webhookUrl: ""
+
+ValidatingWebhookConfiguration: true
