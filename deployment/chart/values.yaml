@@ -79,3 +79,5 @@ affinity: {}
 
 secrets:
   enabled: false
+
+webhookUrl: ""

@@ -9,3 +9,5 @@ httpRoute:
     namespace: istio-ingress
   hosts:
     - repository-compliance-webhook.external.blackbird.cloud
+
+webhookUrl: https://repository-compliance-webhook.external.blackbird.cloud
