@@ -1,4 +1,6 @@
-FROM golang:1.20.11 as builder
+FROM golang:1.20-alpine as builder
+
+RUN apk update && apk upgrade
 
 RUN mkdir -p /app
 WORKDIR /app
