@@ -7,8 +7,10 @@ COPY . /app/
 
 RUN make compile
 
-# FROM scratch
+FROM scratch
 
-# COPY --from=builder /app/main /app/main
+COPY --from=builder /app/main /app/main
+COPY --from=builder /app/go.mod /app/go.mod
+COPY --from=builder /app/go.sum /app/go.sum
 
 ENTRYPOINT ["/app/main"]
